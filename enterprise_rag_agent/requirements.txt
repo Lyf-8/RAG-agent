@@ -1,0 +1,32 @@
+# ===== 企业RAG+LangGraph Agent 依赖清单 =====
+# 说明：手册原始版本(0.2.0)已过时，本文件基于 2026 年现代 API（LangChain/LangGraph 1.x）
+# 已预装的核心包用注释标出版本，保证可复现
+
+# --- LangChain / LangGraph 核心（已装，勿降级）---
+langchain>=1.3          # 已装 1.3.15：文档加载器、文本切分器、Prompt模板
+langgraph>=1.2          # 已装 1.2.11：Agent状态图编排核心
+langchain-community>=0.4 # 已装 0.4.2：Chroma等社区集成
+langchain-openai>=1.5   # 已装 1.5.0：OpenAI兼容协议（可接DashScope/DeepSeek）
+
+# --- Embedding 与向量库 ---
+sentence-transformers>=5.7  # 已装 5.7.0：加载 BGE-M3 / BGE-Reranker
+chromadb>=1.5               # 已装 1.5.9：POC本地向量库
+qdrant-client>=1.12         # 阶段2：企业版向量库
+FlagEmbedding>=1.3          # 阶段2：BGE-M3稠密+稀疏双向量
+torch>=2.6                  # 已装 2.6.0+cu124：模型推理引擎
+
+# --- 文档解析（阶段1）---
+pypdf>=5.0            # PDF解析
+python-docx>=1.1      # Word解析
+
+# --- 检索增强（阶段4）---
+rank-bm25>=0.2        # BM25关键词稀疏检索（RRF融合用）
+
+# --- LLM API（国内优先）---
+dashscope>=1.22       # 通义千问官方SDK（也可走langchain-openai兼容协议）
+openai>=2.0           # 已装 2.52.0：OpenAI兼容客户端
+
+# --- 工程化（阶段6）---
+fastapi>=0.115        # API服务封装
+uvicorn>=0.30         # 已装 0.52.3：ASGI服务器
+pydantic>=2.10        # 已装 2.13.4：数据校验
