@@ -24,8 +24,9 @@
 """
 from typing import Any
 
-from config.settings import AGENT_MAX_REWRITES
+from config.settings import AGENT_MAX_REWRITES, CREW_TRIGGER_KEYWORDS
 from agent.prompts import GRADE_PROMPT, REWRITE_PROMPT
+from agent.subagents.crew_team import run_crew
 from qa_chain_v2 import retrieve_and_rerank_v2, build_context_v2
 from qa_chain import PROMPT, get_llm
 
@@ -72,17 +73,29 @@ def grade_documents(state: dict) -> dict[str, Any]:
 
 
 # ========== 条件路由：判相关性后走哪条边 ==========
+def _is_report_task(question: str) -> bool:
+    """启发式判断是否为"报告型任务"（对比/审核/写报告等需要多步骤创作的问题）
+
+    用关键词匹配而非再调一次 LLM 分类：零成本、可解释、规则就在 settings 里可改。
+    """
+    return any(kw in question for kw in CREW_TRIGGER_KEYWORDS)
+
+
 def decide_next(state: dict) -> str:
     """
     图的条件边：根据过滤结果决定下一步
 
-    - 有相关文档 → generate（信息足够，直接生成）
+    - 有相关文档 且 是报告型任务 → crew（CrewAI 多角色协作成稿，阶段4新增）
+    - 有相关文档 且 普通问答   → generate（单 LLM 直接生成）
     - 无相关文档 且 改写次数未达上限 → rewrite（改写问题重试）
     - 无相关文档 且 已达上限 → generate（兜底：带空上下文生成，
       Prompt 中的规则会让 LLM 明确回答"根据现有资料无法回答"，避免死循环）
     """
     if state["relevant_docs"]:
-        print("[路由 decide_next] 有相关文档 → generate")
+        if _is_report_task(state["original_question"]):
+            print("[路由 decide_next] 有相关文档，报告型任务 → crew_collaborate")
+            return "crew"
+        print("[路由 decide_next] 有相关文档，普通问答 → generate")
         return "generate"
     if state["rewrite_count"] < AGENT_MAX_REWRITES:
         print(f"[路由 decide_next] 无相关文档，改写次数 {state['rewrite_count']}/{AGENT_MAX_REWRITES} → rewrite_query")
@@ -122,3 +135,22 @@ def generate(state: dict) -> dict[str, Any]:
     response = llm.invoke(PROMPT.format_messages(context=context, question=question))
     print("[节点 generate] 答案生成完毕")
     return {"answer": response.content}
+
+
+# ========== 节点5：CrewAI 多角色协作（阶段4-模式A）==========
+def crew_collaborate(state: dict) -> dict[str, Any]:
+    """
+    报告型任务的成稿节点：把检索+质检后的资料交给 CrewAI 团队（研究→审核→写作）
+
+    子Agent 集成原则的代码体现：
+    - 本节点与 retrieve/generate 地位平等：state 进 → 局部更新字典出
+    - run_crew 是纯函数，只接收字符串、返回字符串，接触不到图状态与路由
+    - 拔掉本节点，主流程（retrieve → grade → generate）不受影响
+    """
+    context = build_context_v2(state["relevant_docs"])
+    question = state["original_question"]
+
+    print(f"[节点 crew_collaborate] 报告型任务，交给 CrewAI 团队（上下文 {len(context)} 字符）...")
+    answer = run_crew(task=question, context=context)
+    print("[节点 crew_collaborate] CrewAI 团队成稿完毕")
+    return {"answer": answer}

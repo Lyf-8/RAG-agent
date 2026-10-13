@@ -54,6 +54,7 @@ NODE_RETRIEVE = "retrieve"
 NODE_GRADE = "grade_documents"
 NODE_REWRITE = "rewrite_query"
 NODE_GENERATE = "generate"
+NODE_CREW = "crew_collaborate"   # 阶段4：CrewAI 多角色子Agent（仅作子节点）
 
 
 def build_graph():
@@ -65,21 +66,24 @@ def build_graph():
     builder.add_node(NODE_GRADE, nodes.grade_documents)
     builder.add_node(NODE_REWRITE, nodes.rewrite_query)
     builder.add_node(NODE_GENERATE, nodes.generate)
+    builder.add_node(NODE_CREW, nodes.crew_collaborate)
 
     # 2) 固定边：START → retrieve → grade
     builder.add_edge(START, NODE_RETRIEVE)
     builder.add_edge(NODE_RETRIEVE, NODE_GRADE)
 
-    # 3) 条件边：grade 之后由 decide_next 决定去 rewrite 还是 generate
+    # 3) 条件边：grade 之后由 decide_next 决定去向
+    #    rewrite=改写重试；generate=普通问答成稿；crew=报告型任务交给CrewAI团队
     builder.add_conditional_edges(
         NODE_GRADE,
         nodes.decide_next,
-        {"rewrite": NODE_REWRITE, "generate": NODE_GENERATE},
+        {"rewrite": NODE_REWRITE, "generate": NODE_GENERATE, "crew": NODE_CREW},
     )
 
-    # 4) 循环边：改写后重新检索；生成后结束
+    # 4) 循环边：改写后重新检索；两个成稿节点都直接结束
     builder.add_edge(NODE_REWRITE, NODE_RETRIEVE)
     builder.add_edge(NODE_GENERATE, END)
+    builder.add_edge(NODE_CREW, END)
 
     return builder.compile()
 

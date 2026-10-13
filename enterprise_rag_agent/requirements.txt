@@ -26,6 +26,10 @@ rank-bm25>=0.2        # BM25关键词稀疏检索（RRF融合用）
 dashscope>=1.22       # 通义千问官方SDK（也可走langchain-openai兼容协议）
 openai>=2.0           # 已装 2.52.0：OpenAI兼容客户端
 
+# --- 阶段4：高阶子Agent（仅作LangGraph子节点，不做主框架）---
+crewai>=0.100         # 模式A：多角色协作（研究员/审核员/写作者）
+# pyautogen>=0.4      # 模式B：代码沙箱执行（后续可选）
+
 # --- 工程化（阶段6）---
 fastapi>=0.115        # API服务封装
 uvicorn>=0.30         # 已装 0.52.3：ASGI服务器
