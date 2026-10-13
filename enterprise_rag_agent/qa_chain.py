@@ -41,12 +41,23 @@ from config.settings import (
 from preprocess.storage.store import search
 
 # ========== LLM 初始化（ChatOpenAI：/chat/completions）==========
-llm = ChatOpenAI(
-    model=LLM_MODEL,
-    api_key=LLM_API_KEY,
-    base_url=LLM_BASE_URL,
-    temperature=LLM_TEMPERATURE,
-)
+# 懒加载单例：import 时不构造，首次调用 get_llm() 才创建。
+# 好处1：Key 未配置/DashScope 欠费时 import 本模块不报错，离线链路照常可用；
+# 好处2：Agent 层测试可通过 monkey-patch get_llm 注入桩 LLM，零成本验证图逻辑
+_llm = None
+
+
+def get_llm():
+    """获取 LLM 实例（单例，懒加载）—— 所有 LLM 调用的统一出口"""
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(
+            model=LLM_MODEL,
+            api_key=LLM_API_KEY,
+            base_url=LLM_BASE_URL,
+            temperature=LLM_TEMPERATURE,
+        )
+    return _llm
 
 # ========== Reranker 初始化（Cross-Encoder 精排模型）==========
 # 懒加载：只有真正用到时才加载模型，避免 import 阶段就占用显存
@@ -140,7 +151,7 @@ def build_context(reranked: list[dict[str, Any]]) -> str:
 def generate_answer(query: str, context: str) -> str:
     """调用 LLM 基于上下文生成答案（需要 DashScope 账户可用）"""
     messages = PROMPT.format_messages(context=context, question=query)
-    response = llm.invoke(messages)
+    response = get_llm().invoke(messages)
     return response.content
 
 

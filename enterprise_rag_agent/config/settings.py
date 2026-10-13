@@ -67,6 +67,9 @@ SPARSE_VECTOR_NAME = "sparse"                 # 稀疏向量名字
 HYBRID_TOP_K = 10           # 稠密/稀疏每路各召回 Top10
 RRF_K = 60                  # RRF 融合常数（业界标准值 60，见 chunker 注释）
 
+# ========== 阶段3：LangGraph Agent 编排参数 ==========
+AGENT_MAX_REWRITES = 2      # 查询改写最大重试次数（防死循环；超限后兜底生成"无法回答"）
+
 # ========== 检查配置是否就绪（后面每个阶段入口都会调用）==========
 def check_llm_ready() -> bool:
     """LLM Key 是否已配置；离线链路（解析/切分/入库）不需要它"""
