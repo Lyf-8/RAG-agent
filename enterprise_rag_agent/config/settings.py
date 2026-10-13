@@ -4,6 +4,25 @@
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# 自动读取项目根目录的 .env 文件（Key 不写死在代码里，也不泄露到 GitHub）
+# .env 文件位置：e:\ai agent study\RAG-agent\.env
+_DOTENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
+# override=True：让 .env 的值覆盖系统环境变量，避免残留的旧值（如模板占位符）干扰
+load_dotenv(_DOTENV_PATH, override=True)
+
+# ========== HuggingFace 镜像配置 ==========
+# 国内访问 HuggingFace 需走镜像，否则模型下载会超时
+# 官方镜像：https://hf-mirror.com
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+
+# ========== 模型本地路径（ModelScope 下载，国内速度快）==========
+# 模型已通过 ModelScope 下载到本地，避免每次从 HuggingFace 加载超时
+# 如果通过 ModelScope 重新下载，路径会自动更新
+_MODELSCOPE_BASE = Path(os.path.expanduser("~")) / ".cache" / "modelscope" / "models"
+EMBEDDING_LOCAL_PATH = str(_MODELSCOPE_BASE / "BAAI--bge-m3" / "snapshots" / "master")
+RERANKER_LOCAL_PATH = str(_MODELSCOPE_BASE / "BAAI--bge-reranker-v2-m3" / "snapshots" / "master")
 
 # ========== 路径配置 ==========
 BASE_DIR = Path(__file__).resolve().parent.parent   # 项目根目录 enterprise_rag_agent/
@@ -14,7 +33,7 @@ CHROMA_DIR = BASE_DIR / "chroma_db"                 # POC向量库本地持久�
 # 通义千问 DashScope，走 OpenAI 兼容协议 —— 好处：一套代码可无缝换 DeepSeek/OpenAI
 LLM_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")    # 从环境变量读取，Key 绝不写死在代码里
 LLM_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-LLM_MODEL = "qwen-plus"       # 主力模型；qwen-max 更强但更贵，qwen-turbo 最便宜
+LLM_MODEL = "qwen-plus"  # 主力模型；qwen-max 更强但更贵，qwen-turbo 最便宜
 LLM_TEMPERATURE = 0.1         # RAG场景要低随机性，保证答案稳定、可追溯
 
 # ========== Embedding 配置（翻译官：文字 → 向量）==========
