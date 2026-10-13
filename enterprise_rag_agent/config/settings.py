@@ -50,6 +50,23 @@ CHUNK_OVERLAP = 80          # 重叠10%，防止句子被硬切断
 RETRIEVE_TOP_K = 10         # 向量召回 Top10
 RERANK_TOP_N = 4            # 重排后筛选 Top4 送给LLM
 
+# ========== 阶段2：父子块切分参数 ==========
+PARENT_CHUNK_SIZE = 600     # 父块大小：喂给 LLM 的完整上下文（语义完整的一段）
+PARENT_CHUNK_OVERLAP = 60   # 父块重叠
+CHILD_CHUNK_SIZE = 200      # 子块大小：只做检索定位，小=向量更聚焦、匹配更准
+CHILD_CHUNK_OVERLAP = 40    # 子块重叠
+
+# ========== 阶段2：Qdrant 向量库配置 ==========
+QDRANT_DIR = BASE_DIR / "qdrant_db"           # Qdrant 本地文件模式存储目录（无需 Docker）
+QDRANT_COLLECTION = "rag_hybrid"              # 子块 Collection（稠密+稀疏双向量）
+QDRANT_PARENT_COLLECTION = "rag_parents"      # 父块 Collection（只存原文，取向量库当 KV 用）
+DENSE_VECTOR_NAME = "dense"                   # 稠密向量名字（Qdrant 命名向量）
+SPARSE_VECTOR_NAME = "sparse"                 # 稀疏向量名字
+
+# ========== 阶段2：Hybrid 混合检索参数 ==========
+HYBRID_TOP_K = 10           # 稠密/稀疏每路各召回 Top10
+RRF_K = 60                  # RRF 融合常数（业界标准值 60，见 chunker 注释）
+
 # ========== 检查配置是否就绪（后面每个阶段入口都会调用）==========
 def check_llm_ready() -> bool:
     """LLM Key 是否已配置；离线链路（解析/切分/入库）不需要它"""

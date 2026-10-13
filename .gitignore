@@ -33,6 +33,8 @@ env/
 # 向量库（本地持久化，大文件且可由原始文档重建，不入库）
 enterprise_rag_agent/chroma_db/
 chroma_db/
+enterprise_rag_agent/qdrant_db/
+qdrant_db/
 
 # 企业真实原始文档（涉密，不入库）
 # 注意：data/raw_docs/smart_office_manual.md 是 POC 示例文档，需要入库以便复现
