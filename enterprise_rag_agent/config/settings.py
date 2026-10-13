@@ -64,6 +64,13 @@ DENSE_VECTOR_NAME = "dense"                   # 稠密向量名字（Qdrant 命�
 SPARSE_VECTOR_NAME = "sparse"                 # 稀疏向量名字
 
 # ========== 阶段2：Hybrid 混合检索参数 ==========
+# 【阶段5 A/B 实测基线】tests/phase5_ab_test.py，18 题题库（20 子块语料）：
+#   - top_k=5/10/15 三档 Recall@10 均 100%，top_k=5 时平均候选仅 6.8 个（精排成本减半）
+#   - top_n=3 时仍满分，上下文 449 字符（比 top_n=4 省 27% token）
+#   - RRF 直接 Top4 与精排 Top4 的 MRR 持平（精排在小语料上增量为 0，
+#     其价值在难检索场景：阶段1大块语料上曾把 Top-1 从 58.3% 提到 100%）
+# 结论：维持现基线不改 —— 语料会增长（增量更新/多文档），top_k/top_n 的余量
+# 是给未来更难检索场景留的安全边际；语料扩大后应重跑 phase5_ab_test 复核。
 HYBRID_TOP_K = 10           # 稠密/稀疏每路各召回 Top10
 RRF_K = 60                  # RRF 融合常数（业界标准值 60，见 chunker 注释）
 
