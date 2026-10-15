@@ -25,12 +25,15 @@
 
 运行方式（项目根目录下）：
     python -m api.main          # 启动服务于 http://127.0.0.1:8000
+    浏览器打开 http://127.0.0.1:8000/ui/    聊天界面（面向使用者，直接打字提问）
     浏览器打开 http://127.0.0.1:8000/docs 可交互调试（FastAPI 自带 Swagger UI）
 """
 import logging
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent.graph import ask
@@ -45,6 +48,11 @@ logger = logging.getLogger("rag_api")
 init_db()   # 启动即建表（幂等）
 
 app = FastAPI(title="企业 RAG Agent API", version="0.5.0")
+
+# ========== 静态聊天页（与 API 同源部署，规避浏览器跨域）==========
+# 浏览器打开 http://127.0.0.1:8000/ui/ 即可像 ChatGPT 一样打字提问
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+app.mount("/ui", StaticFiles(directory=str(_STATIC_DIR), html=True), name="ui")
 
 
 # ========== 请求/响应模型（边界校验）==========

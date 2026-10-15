@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>企业知识库智能助手</title>
+<style>
+  /* ===== 设计令牌：颜色/圆角统一在此，改主题只改这里 ===== */
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #e3e6ea;
+    --text: #1f2329;
+    --text-muted: #8a9099;
+    --brand: #1a73e8;
+    --error: #b3261e;
+    --error-border: #e8b4b4;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 720px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .title { font-size: 16px; font-weight: 600; }
+  .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  #new-session {
+    font-size: 13px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  #new-session:hover { color: var(--text); border-color: var(--text-muted); }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .user .bubble {
+    background: var(--brand);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .assistant .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.error { border-color: var(--error-border); color: var(--error); }
+  .thinking { color: var(--text-muted); }
+  .hint {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    margin-top: 40px;
+    line-height: 1.9;
+  }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  #input {
+    flex: 1;
+    resize: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    max-height: 120px;
+    outline: none;
+    background: var(--surface);
+    color: var(--text);
+  }
+  #input:focus { border-color: var(--brand); }
+  #send {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #send:disabled { opacity: .45; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <div class="title">企业知识库智能助手</div>
+        <div class="subtitle" id="session-label">新会话（未开始）</div>
+      </div>
+      <button id="new-session">新会话</button>
+    </header>
+
+    <div id="messages">
+      <div class="hint" id="hint">
+        基于企业私有文档作答，答案可溯源、不编造。<br />
+        试试问：请假审批流程是什么？
+      </div>
+    </div>
+
+    <footer>
+      <textarea id="input" rows="1" placeholder="输入问题，Enter 发送 / Shift+Enter 换行"></textarea>
+      <button id="send">发送</button>
+    </footer>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  var input = document.getElementById('input');
+  var sendBtn = document.getElementById('send');
+  var messages = document.getElementById('messages');
+  var sessionLabel = document.getElementById('session-label');
+  var newSessionBtn = document.getElementById('new-session');
+  var hint = document.getElementById('hint');
+
+  var sessionId = null;   // 会话ID：首次提问由服务端分配，之后复用 → 多轮历史连续
+  var busy = false;
+
+  // 追加一条消息气泡；返回该行节点，便于后续移除（如占位符）
+  function appendRow(role, text, isError) {
+    if (hint) { hint.remove(); hint = null; }   // 首次对话即移除提示语
+    var row = document.createElement('div');
+    row.className = 'row ' + role;
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble' + (isError ? ' error' : '');
+    bubble.textContent = text;                  // textContent 而非 innerHTML：天然防 XSS
+    row.appendChild(bubble);
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+    return row;
+  }
+
+  function setBusy(v) {
+    busy = v;
+    sendBtn.disabled = v;
+    input.disabled = v;
+  }
+
+  async function ask() {
+    var text = input.value.trim();
+    if (!text || busy) return;
+
+    appendRow('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+    setBusy(true);
+
+    // 先放一个"思考中"占位气泡，拿到答案后替换
+    var placeholder = appendRow('assistant', '正在检索企业知识库…');
+    placeholder.firstChild.classList.add('thinking');
+
+    var payload = { question: text };
+    if (sessionId) { payload.session_id = sessionId; }   // 带上会话ID → 服务端累积历史
+
+    try {
+      var res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        var err = await res.json().catch(function () { return {}; });
+        throw new Error(err.detail || ('HTTP ' + res.status));
+      }
+      var data = await res.json();
+      sessionId = data.session_id;
+      sessionLabel.textContent = '会话 ' + sessionId.slice(0, 8);
+      placeholder.remove();
+      appendRow('assistant', data.answer);
+    } catch (e) {
+      placeholder.remove();
+      appendRow('assistant', '请求失败：' + e.message, true);
+    } finally {
+      setBusy(false);
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', ask);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {   // Enter 发送，Shift+Enter 换行
+      e.preventDefault();
+      ask();
+    }
+  });
+  // 输入框随内容自动增高（上限 120px）
+  input.addEventListener('input', function () {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  newSessionBtn.addEventListener('click', function () {
+    sessionId = null;   // 清前端会话ID（服务端旧历史仍保留，可按旧ID查询）
+    sessionLabel.textContent = '新会话（未开始）';
+    messages.innerHTML = '';
+    var h = document.createElement('div');
+    h.className = 'hint';
+    h.textContent = '已开启新会话，可以继续提问。';
+    messages.appendChild(h);
+    hint = h;
+    input.focus();
+  });
+
+  input.focus();
+})();
+</script>
+</body>
+</html>
