@@ -4,23 +4,6 @@
 职责：将长文本 → 固定大小的小块（chunks），供 Embedding 向量化
 
 核心工具：LangChain 的 RecursiveCharacterTextSplitter（递归字符分割器）
-
-知识点讲解：
-1. 为什么需要切分？
-   - LLM 上下文窗口有限（qwen-plus 约 32K tokens），不能整篇文档直接喂给模型
-   - 向量检索是"块级"匹配：把文档切成小块，每块独立向量化，
-     检索时找到最相关的几块拼成上下文，而非整篇文档
-
-2. RecursiveCharacterTextSplitter 的工作原理：
-   - 优先按 "\n\n"（段落）切分，切不出合适大小再按 "\n"（行）切，
-     再不行按 " "（空格）切，最后按字符切
-   - 这种"递归"策略尽量保持语义完整性，避免在句子中间硬切断
-
-3. chunk_size=800, chunk_overlap=80 的含义：
-   - chunk_size=800：每块最多800字符（约400-500汉字，接近512 token）
-   - chunk_overlap=80：相邻块重叠80字符（10%），防止句子被硬切断丢失上下文
-   - overlap 太小 → 边界信息丢失；overlap 太大 → 况余存储和检索
-   - 10% 是业界验证的经验最优值
 """
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 

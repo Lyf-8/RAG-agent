@@ -2,28 +2,6 @@
 阶段2-步骤3-B：Qdrant 向量库存储与双路检索
 
 职责：替代阶段1的 Chroma，用 Qdrant 存储子块（稠密+稀疏双向量）和父块原文。
-
-知识点讲解：
-1. 为什么从 Chroma 迁移到 Qdrant？
-   - Chroma 只支持稠密向量，无法做 Hybrid 混合检索
-   - Qdrant 原生支持"命名向量"（一个点挂多种向量）和稀疏向量索引
-   - Qdrant 是生产级向量库（Rust 编写，企业用得最多），
-     支持本地文件模式（无需 Docker，学习零成本），
-     之后可无缝切换成 Docker/云服务模式，API 完全一样
-
-2. Qdrant 的三个关键设计：
-   - 命名向量：同一个点的 vector 字段是 {"dense": [...], "sparse": {...}}，
-     检索时用 using="dense" 或 using="sparse" 指定走哪路索引
-   - ID 限制：Qdrant 的点 ID 只能是"无符号整数或 UUID"，
-     我们的 child_id 是字符串，用 uuid5（确定性哈希）转换，
-     同一个 child_id 永远生成同一个 UUID → 天然支持幂等 upsert
-   - payload：原文和元数据存在 payload 里，检索时一并返回
-
-3. 父块为什么也放 Qdrant？
-   父块不需要被检索，只需要"按 ID 取原文"（KV 查询）。
-   Qdrant 的 retrieve() 正好提供按 ID 批量取点的能力，
-   挂一个 1 维占位向量即可。企业里常用 Redis/Postgres 当这个 docstore，
-   学习阶段用 Qdrant 一个组件搞定，减少依赖。
 """
 from typing import List, Dict, Any
 from uuid import NAMESPACE_DNS, uuid5

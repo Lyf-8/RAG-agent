@@ -18,31 +18,6 @@
       ├─ 有相关文档 ──────────► generate ─► END
       └─ 无相关文档且未达上限 ─► rewrite_query ─► retrieve（循环）
       （达上限时兜底走 generate，Prompt 让 LLM 坦诚"无法回答"）
-
-知识点讲解：
-1. LangGraph 的三个核心概念（对照本图理解）：
-   - State：一张图的"全局记事本"，节点读写它（见 state.py 的 AgentState）
-   - Node：普通 Python 函数，state 进 → 局部更新字典出
-   - Edge：节点间的连线；普通边（add_edge）无条件跳转，
-     条件边（add_conditional_edges）根据路由函数的返回值决定去向
-
-2. 为什么用条件边而不是在节点里写 if？
-   - 把"路由逻辑"从"节点业务逻辑"中拆出来，路由函数本身不产生副作用，
-     图结构（谁能到哪）在 graph.py 一眼看清 —— 这就是编排层的价值
-
-3. add_conditional_edges 的第三个参数（路由映射字典）：
-   {"rewrite": "rewrite_query", "generate": "generate"}
-   把路由函数的返回值映射到节点名，同时这张映射表也是图的"合法出口清单"，
-   LangGraph 会据此校验，写错节点名编译期就能发现
-
-4. 为什么循环边是 rewrite_query → retrieve 而不是回到 grade_documents？
-   改写后的问题必须重新检索（新问题的向量变了），
-   回到 grade 是"拿旧文档重判"，白花钱还毫无意义
-
-5. draw_mermaid()：
-   编译后的图可以导出 Mermaid 文本，粘贴到任何支持 Mermaid 的地方
-   （GitHub Markdown、Typora、mermaid.live）即可渲染成流程图 —— 
-   图结构即文档，不会出现"文档与代码不一致"
 """
 from langgraph.graph import StateGraph, START, END
 

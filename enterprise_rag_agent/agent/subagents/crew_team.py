@@ -8,26 +8,6 @@
     研究员 researcher  → 从检索到的资料中整理与任务相关的要点
     审核员 reviewer    → 逐条核对要点是否有资料依据，剔除无依据内容（RAG 防幻觉第二道关）
     写作者 writer      → 把审核后的要点写成结构清晰的最终回答
-
-知识点讲解：
-1. 为什么多角色比单 LLM 一次成稿更好？
-   - 单 LLM 一次生成要同时兼顾"找要点 + 查事实 + 写文风"，注意力被摊薄，
-     长上下文下容易顾此失彼（典型症状：编造资料里没有的细节）
-   - 拆成"整理 → 审核 → 成稿"三步，每个角色只做一件事、Prompt 更聚焦，
-     且审核员的"对抗性核对"是专门防幻觉的设计 —— 这是 Multi-Agent 的核心价值：
-     用角色分工换取单点质量，而不是堆一个更大的模型
-
-2. 手册核心禁忌的落地（"禁止子Agent做主框架"）：
-   - 本模块只暴露一个纯函数 run_crew()：输入 task+context 两个字符串，输出一个字符串
-   - CrewAI 团队不知道 LangGraph 的存在，拿不到图状态、改不了路由字段
-   - LangGraph 主图把它当普通节点调用，拔掉本模块主流程（retrieve→grade→generate）原样能跑
-   - 这就是"子Agent 只作子节点"：主流程可控、可追溯、可人工干预
-
-3. CrewAI 的 LLM 接入：
-   - CrewAI 内部走 LiteLLM 协议，OpenAI 兼容端点用 "openai/<模型名>" 前缀声明，
-     配合 base_url 即可接入 DashScope 兼容模式，与主链路共用同一个 Key
-   - crewai 包较重，采用懒加载：只有真实调用 run_crew 时才 import，
-     未安装 crewai 时本模块可正常被 import（桩测试不受影响）
 """
 from config.settings import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_TEMPERATURE
 

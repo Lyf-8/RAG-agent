@@ -2,24 +2,6 @@
 步骤4：基础检索+Rerank问答链路
 
 职责：实现完整问答流程：用户提问 → 向量检索 → Reranker 精排 → LLM 生成答案
-
-知识点讲解：
-1. Reranker 的作用：向量检索是"粗排"（Bi-Encoder，问题和文档分别编码后比余弦相似度），
-   Reranker 是"精排"（Cross-Encoder，把问题和文档拼在一起编码，能捕捉两者之间的交互），
-   所以精度远高于向量检索，是 RAG 中性价比最高的一环。
-
-2. 为什么 LLM 用 ChatOpenAI 而不是 OpenAI？
-   - LangChain 有两个类：
-     * OpenAI      → 调用旧版 /completions 端点（仅支持 completion 式补全）
-     * ChatOpenAI  → 调用 /chat/completions 端点（支持 messages 角色对话）
-   - DashScope 的 OpenAI 兼容模式只提供 /chat/completions，
-     所以必须用 ChatOpenAI，否则会报 404 "Unsupported model XXX for OpenAI compatibility mode"
-   - 这是本项目踩过的一个真实坑：类选错，模型名再对也没用
-
-3. 为什么用 messages（角色化）而不是纯字符串 prompt？
-   - system 消息设定身份与约束（"只依据上下文回答"）
-   - human 消息承载动态内容（检索到的上下文 + 用户问题）
-   - 角色分离让模型更稳定地遵守指令，是生产环境的标准写法
 """
 from typing import Any
 

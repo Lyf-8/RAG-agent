@@ -4,13 +4,6 @@
 职责：将 PDF/Markdown 原始文档 → 干净的纯文本
 - 去除页眉页脚、多余换行、脏数据
 - 保留纯文本内容，供后续切分使用
-
-知识点讲解：
-1. 为什么需要"清洗"？原始文档中常有页码、页眉、乱码、连续空行等噪声，
-   如果不清洗直接切分，会导致向量质量下降，检索时召回无关内容。
-2. Markdown 解析用 LangChain 的 UnstructuredMarkdownLoader，
-   PDF 解析用 pypdf，两者最终都输出纯文本。
-3. POC 阶段只做最简清洗：去多余空行 + strip，阶段2会升级为标题层级识别。
 """
 import re
 from pathlib import Path
